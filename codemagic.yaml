@@ -1,11 +1,44 @@
-# Workflow setup for building Native iOS project
+# Automatically generated on 2021-05-10 UTC from https://codemagic.io/app/6061cc4b11790a0f78a02ab1/settings
+# Note that this configuration is not an exact match to UI settings. Review and adjust as necessary.
+
 workflows:
-  ios-project: # workflow ID
-    name: iOS project # workflow name
+  default-workflow:
+    name: Default Workflow
+    max_build_duration: 60
     environment:
+      flutter: stable
       xcode: latest
       cocoapods: default
     scripts:
-      - xcodebuild build -project "project.xcodeproj" -scheme "MyScheme" CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
+      - |
+        # set up debug keystore
+        rm -f ~/.android/debug.keystore
+        keytool -genkeypair \
+          -alias androiddebugkey \
+          -keypass android \
+          -keystore ~/.android/debug.keystore \
+          -storepass android \
+          -dname 'CN=Android Debug,O=Android,C=US' \
+          -keyalg 'RSA' \
+          -keysize 2048 \
+          -validity 10000
+      - |
+        # set up local properties
+        echo "flutter.sdk=$HOME/programs/flutter" > "$FCI_BUILD_DIR/android/local.properties"
+      - flutter packages pub get
+      - flutter build apk --debug
+      - find . -name "Podfile" -execdir pod install \;
+      - flutter build ios --debug --no-codesign
     artifacts:
+      - build/**/outputs/**/*.apk
+      - build/**/outputs/**/*.aab
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
+      - build/**/outputs/**/mapping.txt
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - flutter_drive.log
+    publishing:
+      email:
+        recipients:
+          - aliasghartahir@gmail.com
+   
